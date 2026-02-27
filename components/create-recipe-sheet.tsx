@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Ingredient {
@@ -119,7 +118,7 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave, initialData }: C
   }
 
   const content = (
-    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-6rem)] pb-4">
+    <div className="space-y-6 pb-4">
       <div className="space-y-2">
         <Label>Recipe name *</Label>
         <Input placeholder="e.g., Grandma's Chicken Soup" className="rounded-xl" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -201,19 +200,11 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave, initialData }: C
   )
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" title={isEditing ? "Edit recipe" : "Create recipe"} className="h-[85vh] rounded-t-2xl md:hidden overflow-y-auto px-6 pt-6">
-          <h2 className="text-lg font-semibold mb-4">{isEditing ? "Edit recipe" : "Create recipe"}</h2>
-          {content}
-        </SheetContent>
-      </Sheet>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="hidden md:flex max-w-lg max-h-[90vh] flex-col">
-          <DialogTitle className="text-lg font-semibold">{isEditing ? "Edit recipe" : "Create recipe"}</DialogTitle>
-          {content}
-        </DialogContent>
-      </Dialog>
-    </>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" title={isEditing ? "Edit recipe" : "Create recipe"} className="h-[90vh] rounded-t-2xl overflow-y-auto px-6 pt-6 sm:max-w-lg sm:mx-auto">
+        <h2 className="text-lg font-semibold mb-4">{isEditing ? "Edit recipe" : "Create recipe"}</h2>
+        {content}
+      </SheetContent>
+    </Sheet>
   )
 }
