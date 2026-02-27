@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Each person in the friend group has their own account
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatarColor  String   @default("#6366f1")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recipes         Recipe[]
+  cookHistory     CookHistory[]
+  calendarEntries CalendarEntry[]
+  savedRecipes    SavedRecipe[]
+  reactions       Reaction[]
+  comments        Comment[]
+  coCookedHistory CookHistoryMember[]
+
+  @@index([email])
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  image       String?
+  servings    Int      @default(4)
+  prepTime    String?
+  source      String?
+  isFavorite  Boolean  @default(false)
+  isTried     Boolean  @default(false)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients     RecipeIngredient[]
+  instructions    RecipeInstruction[]
+  tags            RecipeTag[]
+  cookHistory     CookHistory[]
+  calendarEntries CalendarEntry[]
+  savedBy         SavedRecipe[]
+
+  @@index([userId])
+  @@index([isFavorite])
+  @@index([isTried])
+}
+
+model RecipeIngredient {
+  id       String @id @default(cuid())
+  recipeId String
+  name     String
+  quantity String
+  unit     String
+  order    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model RecipeInstruction {
+  id       String @id @default(cuid())
+  recipeId String
+  step     String @db.Text
+  order    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model RecipeTag {
+  id       String @id @default(cuid())
+  recipeId String
+  name     String
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([name])
+}
+
+// A logged cook — shows up in the social feed
+model CookHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  date      DateTime
+  rating    Int
+  note      String?  @db.Text
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe              @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
+  comments  Comment[]
+  coCooks   CookHistoryMember[]
+
+  @@index([userId])
+  @@index([recipeId])
+  @@index([date])
+}
+
+// Co-cooks: additional users credited on a single cook history entry
+model CookHistoryMember {
+  id            String   @id @default(cuid())
+  cookHistoryId String
+  userId        String
+  createdAt     DateTime @default(now())
+
+  cookHistory CookHistory @relation(fields: [cookHistoryId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cookHistoryId, userId])
+  @@index([cookHistoryId])
+  @@index([userId])
+}
+
+// Emoji reaction on a cook post
+model Reaction {
+  id            String   @id @default(cuid())
+  cookHistoryId String
+  userId        String
+  emoji         String
+  createdAt     DateTime @default(now())
+
+  cookHistory CookHistory @relation(fields: [cookHistoryId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cookHistoryId, userId, emoji])
+  @@index([cookHistoryId])
+  @@index([userId])
+}
+
+// Comment on a cook post
+model Comment {
+  id            String   @id @default(cuid())
+  cookHistoryId String
+  userId        String
+  text          String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cookHistory CookHistory @relation(fields: [cookHistoryId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cookHistoryId])
+  @@index([userId])
+}
+
+// A recipe saved by a user (separate from owning it)
+model SavedRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  wantToTry Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+// A planned or logged meal on the cooking calendar
+model CalendarEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  mealSlot  String
+  recipeId  String?
+  note      String?
+  isLogged  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([date])
+}
