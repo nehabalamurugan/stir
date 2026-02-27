@@ -1,11 +1,10 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Plus, Search, Star, BookOpen, Link2, X, Trash2, ExternalLink, Bookmark, UtensilsCrossed, ChefHat } from "lucide-react"
+import { Plus, Search, Star, BookOpen, Link2, X, Trash2, ExternalLink, Bookmark, UtensilsCrossed, ChefHat, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { CreateRecipeSheet } from "@/components/create-recipe-sheet"
 import { RecipeDetailDialog } from "@/components/recipe-detail-dialog"
@@ -49,6 +48,7 @@ export default function RecipesPage() {
   const [urlInput, setUrlInput] = useState("")
   const [scraping, setScraping] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [detailRecipe, setDetailRecipe] = useState<Recipe | null>(null)
 
   const fetchRecipes = useCallback(async () => {
@@ -152,14 +152,37 @@ export default function RecipesPage() {
   }
 
   async function handleCreate(recipe: { title: string; description: string; prepTime: string; servings: number; ingredients: { id: string; name: string; quantity: string; unit: string }[]; instructions: string[]; tags: string[] }) {
-    const res = await fetch("/api/recipes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(recipe),
-    })
-    if (res.ok) {
-      toast.success("Recipe created!")
-      fetchRecipes()
+    const body = {
+      title: recipe.title,
+      description: recipe.description || null,
+      prepTime: recipe.prepTime || null,
+      servings: recipe.servings,
+      ingredients: recipe.ingredients.filter((i) => i.name.trim()).map(({ name, quantity, unit }) => ({ name, quantity, unit })),
+      instructions: recipe.instructions.filter((s) => s.trim()),
+      tags: recipe.tags,
+    }
+
+    if (editingRecipe) {
+      const res = await fetch(`/api/recipes/${editingRecipe.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        toast.success("Recipe updated!")
+        setEditingRecipe(null)
+        fetchRecipes()
+      }
+    } else {
+      const res = await fetch("/api/recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        toast.success("Recipe created!")
+        fetchRecipes()
+      }
     }
   }
 
@@ -365,6 +388,9 @@ export default function RecipesPage() {
                       color={r.isFavorite ? "#f59e0b" : "currentColor"}
                     />
                   </button>
+                  <button onClick={() => { setEditingRecipe(r); setCreateOpen(true) }} className="p-1 text-muted-foreground hover:text-foreground transition-colors">
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button onClick={() => deleteRecipe(r.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -478,23 +504,21 @@ export default function RecipesPage() {
       )}
 
       {/* Add recipe modal */}
-      <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent side="bottom" className="h-auto rounded-t-2xl md:hidden px-6 pt-6 pb-8">
+      <Sheet open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) setAddMode(null) }}>
+        <SheetContent side="bottom" className="h-auto rounded-t-2xl px-6 pt-6 pb-8 sm:max-w-md sm:mx-auto" title="Add a recipe">
           <h2 className="text-lg font-semibold mb-4">Add a recipe</h2>
           {addContent}
         </SheetContent>
       </Sheet>
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="hidden md:block max-w-md rounded-2xl">
-          <DialogHeader><DialogTitle>Add a recipe</DialogTitle></DialogHeader>
-          {addContent}
-        </DialogContent>
-      </Dialog>
 
       <CreateRecipeSheet
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(open) => {
+          if (!open) setEditingRecipe(null)
+          setCreateOpen(open)
+        }}
         onSave={handleCreate}
+        initialData={editingRecipe}
       />
 
       <RecipeDetailDialog

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
-import { Plus, ChefHat, Star, MessageCircle, Bookmark, BookmarkCheck, Utensils, Send } from "lucide-react"
+import { Plus, ChefHat, Star, MessageCircle, Bookmark, BookmarkCheck, Utensils, Send, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MemberAvatar } from "@/components/member-avatar"
 import { LogCookDialog } from "@/components/log-cook-dialog"
@@ -10,6 +10,7 @@ import { useAuth } from "@/components/auth-provider"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 const EMOJIS = ["🔥", "😍", "👏", "🤣"] as const
 
@@ -70,6 +71,7 @@ function StarDisplay({ rating }: { rating: number }) {
 
 function FeedCard({
   entry, currentUser, onReaction, onComment, onSave, onWantToTry,
+  onDelete,
   savedRecipeIds, wantToTryIds, onViewRecipe,
 }: {
   entry: CookEntry
@@ -78,6 +80,7 @@ function FeedCard({
   onComment: (cookHistoryId: string, text: string) => Promise<void>
   onSave: (recipeId: string) => void
   onWantToTry: (recipeId: string) => void
+  onDelete: (cookHistoryId: string) => void
   savedRecipeIds: Set<string>
   wantToTryIds: Set<string>
   onViewRecipe: (entry: CookEntry) => void
@@ -117,8 +120,9 @@ function FeedCard({
         {/* Author + date + rating */}
         <div className="flex items-center gap-3">
           {/* Stacked avatars */}
-          <div
-            className="relative flex-shrink-0"
+          <Link
+            href={`/profile/${entry.user.id}`}
+            className="relative flex-shrink-0 hover:opacity-80 transition-opacity"
             style={{ width: entry.coCooks.length > 0 ? `${28 + entry.coCooks.length * 14}px` : "28px", height: "28px" }}
           >
             <MemberAvatar member={entry.user} size="sm" className="absolute left-0 top-0 ring-2 ring-background z-10" />
@@ -131,14 +135,29 @@ function FeedCard({
                 style={{ left: `${(i + 1) * 14}px`, zIndex: 9 - i }}
               />
             ))}
-          </div>
+          </Link>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium leading-tight">{authorName}</p>
+            <div className="text-sm font-medium leading-tight flex items-center gap-1 flex-wrap">
+              {allCooks.map((u, i) => (
+                <span key={u.id}>
+                  <Link href={`/profile/${u.id}`} className="hover:text-primary transition-colors">{u.name}</Link>
+                  {i < allCooks.length - 1 && <span className="text-muted-foreground"> & </span>}
+                </span>
+              ))}
+            </div>
             <p className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(entry.date), { addSuffix: true })}
             </p>
           </div>
           <StarDisplay rating={entry.rating} />
+          {currentUser && currentUser.id === entry.user.id && (
+            <button
+              onClick={() => onDelete(entry.id)}
+              className="ml-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         <button onClick={() => onViewRecipe(entry)} className="text-left w-full group">
@@ -221,9 +240,11 @@ function FeedCard({
               <div className="space-y-2.5">
                 {entry.comments.map((c) => (
                   <div key={c.id} className="flex gap-2 items-start">
-                    <MemberAvatar member={c.user} size="xs" className="mt-0.5 flex-shrink-0" />
+                    <Link href={`/profile/${c.user.id}`}>
+                      <MemberAvatar member={c.user} size="xs" className="mt-0.5 flex-shrink-0 hover:opacity-80 transition-opacity" />
+                    </Link>
                     <p className="text-xs flex-1 min-w-0">
-                      <span className="font-medium">{c.user.name} </span>
+                      <Link href={`/profile/${c.user.id}`} className="font-medium hover:text-primary transition-colors">{c.user.name} </Link>
                       <span className="text-muted-foreground">{c.text}</span>
                     </p>
                   </div>
@@ -364,6 +385,11 @@ export default function FeedPage() {
     ? entries.filter((e) => e.user?.id === filterUserId || e.coCooks.some((cc) => cc.user.id === filterUserId))
     : entries
 
+  async function handleDelete(cookHistoryId: string) {
+    await fetch(`/api/history/${cookHistoryId}`, { method: "DELETE" })
+    setEntries((prev) => prev.filter((e) => e.id !== cookHistoryId))
+  }
+
   const detailRecipe = viewingRecipe ? { ...viewingRecipe.recipe, image: viewingRecipe.image ?? viewingRecipe.recipe.image ?? null } : null
 
   return (
@@ -415,6 +441,7 @@ export default function FeedPage() {
               onComment={handleComment}
               onSave={handleSave}
               onWantToTry={handleWantToTry}
+              onDelete={handleDelete}
               savedRecipeIds={savedRecipeIds}
               wantToTryIds={wantToTryIds}
               onViewRecipe={setViewingRecipe}

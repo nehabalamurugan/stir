@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, X, Clock, Users, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,17 @@ interface Ingredient {
   unit: string
 }
 
+interface InitialRecipeData {
+  title: string
+  description?: string | null
+  prepTime?: string | null
+  servings?: number
+  ingredients?: { name: string; quantity: string; unit: string }[]
+  instructions?: { step: string }[] | string[]
+  tags?: { name: string }[] | string[]
+  source?: string | null
+}
+
 interface CreateRecipeSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -30,12 +41,13 @@ interface CreateRecipeSheetProps {
     instructions: string[]
     tags: string[]
   }) => void
+  initialData?: InitialRecipeData | null
 }
 
 const SUGGESTED_TAGS = ["quick", "vegetarian", "vegan", "high protein", "low carb", "spicy", "comfort food", "one pot", "grilled", "healthy"]
 const UNITS = ["", "cups", "tbsp", "tsp", "oz", "lbs", "g", "kg", "ml", "L", "pieces", "cloves", "slices"]
 
-export function CreateRecipeSheet({ open, onOpenChange, onSave }: CreateRecipeSheetProps) {
+export function CreateRecipeSheet({ open, onOpenChange, onSave, initialData }: CreateRecipeSheetProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [prepTime, setPrepTime] = useState("")
@@ -44,6 +56,42 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave }: CreateRecipeSh
   const [instructions, setInstructions] = useState<string[]>([""])
   const [tags, setTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    if (initialData) {
+      setTitle(initialData.title || "")
+      setDescription(initialData.description || "")
+      setPrepTime(initialData.prepTime || "")
+      setServings(initialData.servings || 4)
+      if (initialData.ingredients?.length) {
+        setIngredients(initialData.ingredients.map((ing, i) => ({
+          id: String(i),
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+        })))
+      } else {
+        setIngredients([{ id: "1", name: "", quantity: "", unit: "" }])
+      }
+      if (initialData.instructions?.length) {
+        setInstructions(initialData.instructions.map((inst) =>
+          typeof inst === "string" ? inst : inst.step
+        ))
+      } else {
+        setInstructions([""])
+      }
+      if (initialData.tags?.length) {
+        setTags(initialData.tags.map((t) => typeof t === "string" ? t : t.name))
+      } else {
+        setTags([])
+      }
+    } else {
+      setTitle(""); setDescription(""); setPrepTime(""); setServings(4)
+      setIngredients([{ id: "1", name: "", quantity: "", unit: "" }])
+      setInstructions([""]); setTags([])
+    }
+  }, [open, initialData])
 
   const addIngredient = () => setIngredients([...ingredients, { id: Date.now().toString(), name: "", quantity: "", unit: "" }])
   const updateIngredient = (id: string, field: keyof Ingredient, value: string) =>
@@ -57,6 +105,8 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave }: CreateRecipeSh
   const toggleTag = (tag: string) => setTags(tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag])
   const addCustomTag = () => { if (customTag && !tags.includes(customTag)) { setTags([...tags, customTag]); setCustomTag("") } }
 
+  const isEditing = !!initialData
+
   const handleSave = () => {
     if (!title.trim()) return
     onSave({
@@ -65,9 +115,6 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave }: CreateRecipeSh
       instructions: instructions.filter((i) => i.trim()),
       tags,
     })
-    setTitle(""); setDescription(""); setPrepTime(""); setServings(4)
-    setIngredients([{ id: "1", name: "", quantity: "", unit: "" }])
-    setInstructions([""]); setTags([])
     onOpenChange(false)
   }
 
@@ -147,21 +194,23 @@ export function CreateRecipeSheet({ open, onOpenChange, onSave }: CreateRecipeSh
         </div>
       </div>
 
-      <Button className="w-full rounded-xl" size="lg" onClick={handleSave} disabled={!title.trim()}>Save recipe</Button>
+      <Button className="w-full rounded-xl" size="lg" onClick={handleSave} disabled={!title.trim()}>
+        {isEditing ? "Update recipe" : "Save recipe"}
+      </Button>
     </div>
   )
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" title="Create recipe" className="h-[85vh] rounded-t-2xl md:hidden overflow-y-auto px-6 pt-6">
-          <h2 className="text-lg font-semibold mb-4">Create recipe</h2>
+        <SheetContent side="bottom" title={isEditing ? "Edit recipe" : "Create recipe"} className="h-[85vh] rounded-t-2xl md:hidden overflow-y-auto px-6 pt-6">
+          <h2 className="text-lg font-semibold mb-4">{isEditing ? "Edit recipe" : "Create recipe"}</h2>
           {content}
         </SheetContent>
       </Sheet>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="hidden md:flex max-w-lg max-h-[90vh] flex-col">
-          <DialogTitle className="text-lg font-semibold">Create recipe</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{isEditing ? "Edit recipe" : "Create recipe"}</DialogTitle>
           {content}
         </DialogContent>
       </Dialog>

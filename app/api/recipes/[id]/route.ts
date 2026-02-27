@@ -7,15 +7,68 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { id } = await params
   const body = await request.json()
-  const recipe = await prisma.recipe.updateMany({
+
+  const { title, description, prepTime, servings, source, isFavorite, isTried, tags, ingredients, instructions } = body
+
+  const recipe = await prisma.recipe.update({
     where: { id, userId },
     data: {
-      ...(body.isFavorite !== undefined ? { isFavorite: body.isFavorite } : {}),
-      ...(body.isTried !== undefined ? { isTried: body.isTried } : {}),
-      ...(body.title ? { title: body.title } : {}),
+      ...(title !== undefined ? { title } : {}),
+      ...(description !== undefined ? { description: description || null } : {}),
+      ...(prepTime !== undefined ? { prepTime: prepTime || null } : {}),
+      ...(servings !== undefined ? { servings } : {}),
+      ...(source !== undefined ? { source: source || null } : {}),
+      ...(isFavorite !== undefined ? { isFavorite } : {}),
+      ...(isTried !== undefined ? { isTried } : {}),
     },
   })
-  return NextResponse.json(recipe)
+
+  if (tags !== undefined) {
+    await prisma.recipeTag.deleteMany({ where: { recipeId: id } })
+    if (tags.length > 0) {
+      await prisma.recipeTag.createMany({
+        data: tags.map((name: string) => ({ recipeId: id, name })),
+      })
+    }
+  }
+
+  if (ingredients !== undefined) {
+    await prisma.recipeIngredient.deleteMany({ where: { recipeId: id } })
+    if (ingredients.length > 0) {
+      await prisma.recipeIngredient.createMany({
+        data: ingredients.map((ing: { name: string; quantity: string; unit: string }, i: number) => ({
+          recipeId: id,
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          order: i,
+        })),
+      })
+    }
+  }
+
+  if (instructions !== undefined) {
+    await prisma.recipeInstruction.deleteMany({ where: { recipeId: id } })
+    if (instructions.length > 0) {
+      await prisma.recipeInstruction.createMany({
+        data: instructions.map((step: string, i: number) => ({
+          recipeId: id,
+          step,
+          order: i,
+        })),
+      })
+    }
+  }
+
+  const updated = await prisma.recipe.findUnique({
+    where: { id },
+    include: {
+      tags: true,
+      ingredients: { orderBy: { order: "asc" } },
+      instructions: { orderBy: { order: "asc" } },
+    },
+  })
+  return NextResponse.json(updated)
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

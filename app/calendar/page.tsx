@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo } from "react"
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns"
 import { MemberAvatar } from "@/components/member-avatar"
 import { LogCookDialog } from "@/components/log-cook-dialog"
@@ -39,6 +39,7 @@ export default function CalendarPage() {
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; mealSlot: string } | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null)
 
   const fetchEntries = useCallback(async () => {
     setLoading(true)
@@ -68,6 +69,11 @@ export default function CalendarPage() {
   function openSlot(date: Date, mealSlot: string) {
     setSelectedSlot({ date, mealSlot })
     setDialogOpen(true)
+  }
+
+  async function handleDeleteEntry(id: string) {
+    await fetch(`/api/calendar/${id}`, { method: "DELETE" })
+    fetchEntries()
   }
 
   return (
@@ -164,13 +170,28 @@ export default function CalendarPage() {
                 <div key={slot} className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground capitalize w-16 flex-shrink-0">{slot}</span>
                   {entry ? (
-                    <div className={cn(
-                      "flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm",
-                      entry.isLogged ? "bg-muted/60 border-border" : "border-dashed border-border bg-transparent"
-                    )}>
+                    <div
+                      className={cn(
+                        "flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer hover:border-primary/60",
+                        entry.isLogged ? "bg-muted/60 border-border" : "border-dashed border-border bg-transparent"
+                      )}
+                      onClick={() => {
+                        setSelectedSlot({ date: selectedDay, mealSlot: slot })
+                        setEditingEntry(entry)
+                        setDialogOpen(true)
+                      }}
+                    >
                       <MemberAvatar member={user} size="xs" />
                       <span className="flex-1 truncate font-medium">{entry.recipe?.title ?? entry.note ?? "—"}</span>
                       {!entry.isLogged && <span className="text-xs text-muted-foreground">planned</span>}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry.id) }}
+                        className="ml-1 text-xs text-muted-foreground hover:text-destructive"
+                        aria-label="Delete from calendar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ) : (
                     <button
@@ -192,6 +213,7 @@ export default function CalendarPage() {
       <button
         onClick={() => {
           setSelectedSlot({ date: new Date(), mealSlot: "dinner" })
+          setEditingEntry(null)
           setDialogOpen(true)
         }}
         className="fixed bottom-20 right-4 md:bottom-8 md:right-8 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-30"
@@ -201,9 +223,19 @@ export default function CalendarPage() {
 
       <LogCookDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingEntry(null)
+            setSelectedSlot(null)
+          }
+          setDialogOpen(open)
+        }}
         prefilledSlot={selectedSlot}
         onSaved={fetchEntries}
+        calendarEntryId={editingEntry?.id}
+        initialRecipeId={editingEntry?.recipe?.id}
+        initialNote={editingEntry?.note ?? undefined}
+        initialIsLogged={editingEntry?.isLogged}
       />
     </div>
   )

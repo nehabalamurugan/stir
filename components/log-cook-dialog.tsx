@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { CreateRecipeSheet } from "@/components/create-recipe-sheet"
 import { MemberAvatar } from "@/components/member-avatar"
@@ -22,6 +21,11 @@ interface LogCookDialogProps {
   onOpenChange: (open: boolean) => void
   prefilledSlot?: { date: Date; mealSlot: string } | null
   onSaved?: () => void
+  /** When set, edits an existing calendar entry instead of creating a new one. */
+  calendarEntryId?: string
+  initialRecipeId?: string
+  initialNote?: string
+  initialIsLogged?: boolean
 }
 
 const MEAL_SLOTS = ["breakfast", "lunch", "dinner"]
@@ -39,7 +43,16 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   )
 }
 
-export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: LogCookDialogProps) {
+export function LogCookDialog({
+  open,
+  onOpenChange,
+  prefilledSlot,
+  onSaved,
+  calendarEntryId,
+  initialRecipeId,
+  initialNote,
+  initialIsLogged,
+}: LogCookDialogProps) {
   const { user } = useAuth()
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [allUsers, setAllUsers] = useState<UserRef[]>([])
@@ -68,6 +81,12 @@ export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: Lo
     fetch("/api/recipes").then((r) => r.json()).then(setRecipes).catch(() => {})
     fetch("/api/users").then((r) => r.json()).then(setAllUsers).catch(() => {})
   }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    if (initialRecipeId) setRecipeId(initialRecipeId)
+    if (initialNote !== undefined) setNote(initialNote)
+  }, [open, initialRecipeId, initialNote])
 
   useEffect(() => {
     if (!open) {
@@ -125,12 +144,27 @@ export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: Lo
     if (!recipeId) return
     setSaving(true)
     try {
-      await fetch("/api/calendar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, mealSlot, recipeId, note: note || null, isLogged: isPast }),
-      })
-      if (isPast) {
+      if (calendarEntryId) {
+        await fetch(`/api/calendar/${calendarEntryId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date,
+            mealSlot,
+            recipeId,
+            note: note || null,
+            isLogged: isPast,
+          }),
+        })
+      } else {
+        await fetch("/api/calendar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, mealSlot, recipeId, note: note || null, isLogged: isPast }),
+        })
+      }
+
+      if (isPast && !initialIsLogged) {
         await fetch("/api/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -249,22 +283,14 @@ export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: Lo
   const title = isPast ? "Log a cook" : "Plan a meal"
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" title={title} className="h-[90vh] rounded-t-2xl md:hidden overflow-y-auto px-6 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <button onClick={() => onOpenChange(false)}><X className="h-5 w-5 text-muted-foreground" /></button>
-          </div>
-          {content}
-        </SheetContent>
-      </Sheet>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="hidden md:block max-w-md rounded-2xl">
-          <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-          {content}
-        </DialogContent>
-      </Dialog>
-    </>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" title={title} className="h-[90vh] rounded-t-2xl overflow-y-auto px-6 pt-6 sm:max-w-md sm:mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button onClick={() => onOpenChange(false)}><X className="h-5 w-5 text-muted-foreground" /></button>
+        </div>
+        {content}
+      </SheetContent>
+    </Sheet>
   )
 }

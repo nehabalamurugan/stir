@@ -10,6 +10,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const entry = await prisma.calendarEntry.updateMany({
     where: { id, userId },
     data: {
+      ...(body.date ? { date: new Date(body.date) } : {}),
       ...(body.isLogged !== undefined ? { isLogged: body.isLogged } : {}),
       ...(body.note !== undefined ? { note: body.note } : {}),
       ...(body.recipeId !== undefined ? { recipeId: body.recipeId } : {}),
