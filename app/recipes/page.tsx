@@ -95,6 +95,30 @@ export default function RecipesPage() {
     }
   }
 
+  async function saveLinkOnly() {
+    const url = urlInput.trim()
+    if (!url) return
+    let title = url
+    try { title = new URL(url).hostname.replace("www.", "") } catch { /* use raw url */ }
+    setScraping(true)
+    try {
+      const res = await fetch("/api/recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, source: url, servings: 1 }),
+      })
+      if (res.ok) {
+        toast.success("Link saved!")
+        setUrlInput("")
+        setAddOpen(false)
+        setAddMode(null)
+        fetchRecipes()
+      }
+    } finally {
+      setScraping(false)
+    }
+  }
+
   async function saveUrlAsRecipe() {
     if (!urlInput.trim()) return
     const url = urlInput.trim()
@@ -270,8 +294,15 @@ export default function RecipesPage() {
             />
           </div>
           <Button onClick={saveUrlAsRecipe} disabled={!urlInput.trim() || scraping} className="w-full rounded-xl">
-            {scraping ? "Saving…" : "Save"}
+            {scraping ? "Saving…" : "Extract full recipe"}
           </Button>
+          <button
+            onClick={saveLinkOnly}
+            disabled={!urlInput.trim() || scraping}
+            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            Just save the link →
+          </button>
         </div>
       )}
     </div>
