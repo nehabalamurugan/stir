@@ -11,7 +11,7 @@ const isPublicRoute = (pathname: string) =>
   pathname.startsWith("/_next") ||
   pathname.includes(".")
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   try {
     const { pathname } = request.nextUrl
     if (isPublicRoute(pathname)) return NextResponse.next()
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.next()
   } catch (err) {
-    console.error("[middleware]", err)
+    console.error("[proxy]", err)
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
