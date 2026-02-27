@@ -34,6 +34,7 @@ type Comment = {
 type CookEntry = {
   id: string
   date: string
+  createdAt: string
   rating: number
   note: string | null
   image: string | null
@@ -146,7 +147,7 @@ function FeedCard({
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(entry.date), { addSuffix: true })}
+              {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
             </p>
           </div>
           <StarDisplay rating={entry.rating} />
