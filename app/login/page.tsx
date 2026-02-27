@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAuth } from "@/components/auth-provider"
 
 function LoginForm() {
   const [email, setEmail] = useState("")
@@ -14,6 +15,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get("from") || "/"
+  const { refreshUser } = useAuth()
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -30,8 +32,8 @@ function LoginForm() {
         setError(data.error || "Invalid email or password")
         return
       }
+      await refreshUser()
       router.push(from)
-      router.refresh()
     } catch {
       setError("Something went wrong")
     } finally {
