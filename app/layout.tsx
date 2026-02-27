@@ -11,17 +11,11 @@ const _dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Stir - Plan meals together",
-  description: "Plan meals together, simplify grocery shopping, and track your cooking journey.",
+  title: "stir: food is better shared",
+  description: "food is better shared",
   generator: "v0.app",
 }
-
-export const viewport: Viewport = {
-  themeColor: "#fafaf8",
-  width: "device-width",
-  initialScale: 1,
-}
-
+  
 export default function RootLayout({
   children,
 }: Readonly<{
