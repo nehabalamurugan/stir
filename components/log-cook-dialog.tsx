@@ -225,8 +225,8 @@ export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: Lo
           <Label>Photo <span className="text-muted-foreground text-xs">(optional)</span></Label>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           {imagePreview ? (
-            <div className="relative rounded-xl overflow-hidden">
-              <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-cover" />
+            <div className="relative rounded-xl overflow-hidden bg-muted flex items-center justify-center max-h-56">
+              <img src={imagePreview} alt="Preview" className="max-h-56 w-auto object-contain" />
               <button onClick={() => { setImage(null); setImagePreview(null) }} className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors">
                 <X className="h-3.5 w-3.5" />
               </button>

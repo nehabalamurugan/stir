@@ -60,7 +60,9 @@ export function RecipeDetailDialog({ open, onOpenChange, recipe }: RecipeDetailD
         </DialogHeader>
 
         {recipe.image && (
-          <img src={recipe.image} alt={recipe.title} className="w-full rounded-xl object-cover max-h-48" />
+          <div className="w-full max-h-80 bg-muted flex items-center justify-center overflow-hidden rounded-xl">
+            <img src={recipe.image} alt={recipe.title} className="max-h-80 w-auto object-contain" />
+          </div>
         )}
 
         <div className="space-y-6 pt-2">

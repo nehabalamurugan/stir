@@ -163,7 +163,13 @@ function FeedCard({
       </div>
 
       {entry.image && (
-        <img src={entry.image} alt={entry.recipe.title} className="w-full object-cover max-h-72" />
+        <div className="w-full max-h-80 bg-muted flex items-center justify-center overflow-hidden">
+          <img
+            src={entry.image}
+            alt={entry.recipe.title}
+            className="max-h-80 w-auto object-contain"
+          />
+        </div>
       )}
 
       <div className="px-4 py-3 border-t border-border/60 space-y-3">
