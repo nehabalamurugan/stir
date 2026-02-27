@@ -31,16 +31,18 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const { recipeId, date, rating, note, image, coUserIds } = body
 
-  if (!recipeId || !date || !rating) {
-    return NextResponse.json({ error: "recipeId, date, and rating are required" }, { status: 400 })
+  if (!recipeId || !date) {
+    return NextResponse.json({ error: "recipeId and date are required" }, { status: 400 })
   }
+
+  const numericRating = typeof rating === "number" ? rating : rating ? parseInt(rating, 10) : 0
 
   const entry = await prisma.cookHistory.create({
     data: {
       userId,
       recipeId,
       date: new Date(date),
-      rating: parseInt(rating),
+      rating: Number.isFinite(numericRating) ? numericRating : 0,
       note: note || null,
       image: image || null,
     },

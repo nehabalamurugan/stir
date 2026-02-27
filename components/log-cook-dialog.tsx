@@ -130,11 +130,18 @@ export function LogCookDialog({ open, onOpenChange, prefilledSlot, onSaved }: Lo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date, mealSlot, recipeId, note: note || null, isLogged: isPast }),
       })
-      if (isPast && rating > 0) {
+      if (isPast) {
         await fetch("/api/history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipeId, date, rating, note: note || null, image: image || null, coUserIds }),
+          body: JSON.stringify({
+            recipeId,
+            date,
+            rating: rating || 0,
+            note: note || null,
+            image: image || null,
+            coUserIds,
+          }),
         })
       }
       onSaved?.()
